@@ -817,6 +817,8 @@ static const struct sam4_chip_details all_sam4_details[] = {
 	},
 
 	/*at91sam4sa16c*/
+	/* Data sheet is unclear but experiment shows SAM4SA16C
+	   has only one flash bank, of 1 MB size */
 	{
 		.chipid_cidr    = 0x28a70ce0,
 		.name           = "at91sam4sa16c",
@@ -824,7 +826,6 @@ static const struct sam4_chip_details all_sam4_details[] = {
 		.total_sram_size      = 160 * 1024,
 		.n_gpnvms       = 3,
 		.n_banks        = 2,
-
 /*		.bank[0] = { */
 		{
 			{
@@ -836,8 +837,8 @@ static const struct sam4_chip_details all_sam4_details[] = {
 				.controller_address = 0x400e0a00,
 				.flash_wait_states = 6,	/* workaround silicon bug */
 				.present = 1,
-				.size_bytes =  512 * 1024,
-				.nsectors   =  64,
+				.size_bytes =  1024 /*512*/ * 1024,
+				.nsectors   =  128,
 				.sector_size = 8192,
 				.page_size   = 512,
 			},
@@ -851,7 +852,7 @@ static const struct sam4_chip_details all_sam4_details[] = {
 				.base_address = FLASH_BANK1_BASE_1024K_SD,
 				.controller_address = 0x400e0c00,
 				.flash_wait_states = 6,	/* workaround silicon bug */
-				.present = 1,
+				.present = 0,//1,
 				.size_bytes =  512 * 1024,
 				.nsectors   =  64,
 				.sector_size = 8192,
@@ -2243,6 +2244,9 @@ static int sam4_page_write(struct sam4_bank_private *pPrivate, unsigned pagenum,
 
 	adr = pagenum * pPrivate->page_size;
 	adr = (adr + pPrivate->base_address);
+	LOG_INFO("Writing Page: 0x%08x address 0x%08x",
+		 (unsigned int)(pagenum),
+		 (unsigned int)(adr));
 
 	/* Get flash mode register value */
 	r = target_read_u32(pPrivate->pChip->target, pPrivate->controller_address, &fmr);
@@ -2254,7 +2258,6 @@ static int sam4_page_write(struct sam4_bank_private *pPrivate, unsigned pagenum,
 
 	/* set FWS (flash wait states) field in the FMR (flash mode register) */
 	fmr |= (pPrivate->flash_wait_states << 8);
-
 	LOG_DEBUG("Flash Mode: 0x%08x", ((unsigned int)(fmr)));
 	r = target_write_u32(pPrivate->pBank->target, pPrivate->controller_address, fmr);
 	if (r != ERROR_OK)
