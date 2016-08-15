@@ -1,3 +1,6 @@
+ ./bootstrap
+ ./configure --enable-cmsis-dap --enable-stlink --enable-ftdi
+
 Welcome to OpenOCD!
 ===================
 
