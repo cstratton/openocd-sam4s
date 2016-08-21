@@ -532,7 +532,7 @@ int target_poll(struct target *target)
 		if (target->state == TARGET_HALTED)
 			target->halt_issued = false;
 		else {
-			long long t = timeval_ms() - target->halt_issued_time;
+			int64_t t = timeval_ms() - target->halt_issued_time;
 			if (t > DEFAULT_HALT_TIMEOUT) {
 				target->halt_issued = false;
 				LOG_INFO("Halt timed out, wake up GDB.");
@@ -1012,6 +1012,15 @@ int target_run_flash_async_algorithm(struct target *target,
 	if (retval2 != ERROR_OK) {
 		LOG_ERROR("error waiting for target flash write algorithm");
 		retval = retval2;
+	}
+
+	if (retval == ERROR_OK) {
+		/* check if algorithm set rp = 0 after fifo writer loop finished */
+		retval = target_read_u32(target, rp_addr, &rp);
+		if (retval == ERROR_OK && rp == 0) {
+			LOG_ERROR("flash write algorithm aborted by target");
+			retval = ERROR_FLASH_OPERATION_FAILED;
+		}
 	}
 
 	return retval;
@@ -2446,9 +2455,9 @@ static int sense_handler(void)
 	if (powerRestored)
 		runPowerRestore = 1;
 
-	long long current = timeval_ms();
-	static long long lastPower;
-	int waitMore = lastPower + 2000 > current;
+	int64_t current = timeval_ms();
+	static int64_t lastPower;
+	bool waitMore = lastPower + 2000 > current;
 	if (powerDropout && !waitMore) {
 		runPowerDropout = 1;
 		lastPower = current;
@@ -2461,7 +2470,7 @@ static int sense_handler(void)
 	int srstDeasserted;
 	srstDeasserted = prevSrstAsserted && !srstAsserted;
 
-	static long long lastSrst;
+	static int64_t lastSrst;
 	waitMore = lastSrst + 2000 > current;
 	if (srstDeasserted && !waitMore) {
 		runSrstDeasserted = 1;
@@ -2771,8 +2780,8 @@ COMMAND_HANDLER(handle_wait_halt_command)
 int target_wait_state(struct target *target, enum target_state state, int ms)
 {
 	int retval;
-	long long then = 0, cur;
-	int once = 1;
+	int64_t then = 0, cur;
+	bool once = true;
 
 	for (;;) {
 		retval = target_poll(target);
@@ -2782,7 +2791,7 @@ int target_wait_state(struct target *target, enum target_state state, int ms)
 			break;
 		cur = timeval_ms();
 		if (once) {
-			once = 0;
+			once = false;
 			then = timeval_ms();
 			LOG_DEBUG("waiting for target %s...",
 				Jim_Nvp_value2name_simple(nvp_target_state, state)->name);
@@ -3913,6 +3922,8 @@ static int target_mem2array(Jim_Interp *interp, struct target *target, int argc,
 	uint32_t count;
 	uint32_t v;
 	const char *varname;
+	const char *phys;
+	bool is_phys;
 	int  n, e, retval;
 	uint32_t i;
 
@@ -3921,8 +3932,8 @@ static int target_mem2array(Jim_Interp *interp, struct target *target, int argc,
 	 * argv[3] = memory address
 	 * argv[4] = count of times to read
 	 */
-	if (argc != 4) {
-		Jim_WrongNumArgs(interp, 1, argv, "varname width addr nelems");
+	if (argc < 4 || argc > 5) {
+		Jim_WrongNumArgs(interp, 1, argv, "varname width addr nelems [phys]");
 		return JIM_ERR;
 	}
 	varname = Jim_GetString(argv[0], &len);
@@ -3941,6 +3952,14 @@ static int target_mem2array(Jim_Interp *interp, struct target *target, int argc,
 	len = l;
 	if (e != JIM_OK)
 		return e;
+	is_phys = false;
+	if (argc > 4) {
+		phys = Jim_GetString(argv[4], &n);
+		if (!strncmp(phys, "phys", n))
+			is_phys = true;
+		else
+			return JIM_ERR;
+	}
 	switch (width) {
 		case 8:
 			width = 1;
@@ -4006,7 +4025,10 @@ static int target_mem2array(Jim_Interp *interp, struct target *target, int argc,
 		if (count > (buffersize / width))
 			count = (buffersize / width);
 
-		retval = target_read_memory(target, addr, width, count, buffer);
+		if (is_phys)
+			retval = target_read_phys_memory(target, addr, width, count, buffer);
+		else
+			retval = target_read_memory(target, addr, width, count, buffer);
 		if (retval != ERROR_OK) {
 			/* BOO !*/
 			LOG_ERROR("mem2array: Read @ 0x%08x, w=%d, cnt=%d, failed",
@@ -4102,6 +4124,8 @@ static int target_array2mem(Jim_Interp *interp, struct target *target,
 	uint32_t count;
 	uint32_t v;
 	const char *varname;
+	const char *phys;
+	bool is_phys;
 	int  n, e, retval;
 	uint32_t i;
 
@@ -4110,8 +4134,8 @@ static int target_array2mem(Jim_Interp *interp, struct target *target,
 	 * argv[3] = memory address
 	 * argv[4] = count to write
 	 */
-	if (argc != 4) {
-		Jim_WrongNumArgs(interp, 0, argv, "varname width addr nelems");
+	if (argc < 4 || argc > 5) {
+		Jim_WrongNumArgs(interp, 0, argv, "varname width addr nelems [phys]");
 		return JIM_ERR;
 	}
 	varname = Jim_GetString(argv[0], &len);
@@ -4130,6 +4154,14 @@ static int target_array2mem(Jim_Interp *interp, struct target *target,
 	len = l;
 	if (e != JIM_OK)
 		return e;
+	is_phys = false;
+	if (argc > 4) {
+		phys = Jim_GetString(argv[4], &n);
+		if (!strncmp(phys, "phys", n))
+			is_phys = true;
+		else
+			return JIM_ERR;
+	}
 	switch (width) {
 		case 8:
 			width = 1;
@@ -4216,7 +4248,10 @@ static int target_array2mem(Jim_Interp *interp, struct target *target,
 		}
 		len -= count;
 
-		retval = target_write_memory(target, addr, width, count, buffer);
+		if (is_phys)
+			retval = target_write_phys_memory(target, addr, width, count, buffer);
+		else
+			retval = target_write_memory(target, addr, width, count, buffer);
 		if (retval != ERROR_OK) {
 			/* BOO !*/
 			LOG_ERROR("array2mem: Write @ 0x%08x, w=%d, cnt=%d, failed",
@@ -5664,7 +5699,7 @@ COMMAND_HANDLER(handle_fast_load_command)
 		return ERROR_FAIL;
 	}
 	int i;
-	int ms = timeval_ms();
+	int64_t ms = timeval_ms();
 	int size = 0;
 	int retval = ERROR_OK;
 	for (i = 0; i < fastload_num; i++) {
@@ -5678,7 +5713,7 @@ COMMAND_HANDLER(handle_fast_load_command)
 		size += fastload[i].length;
 	}
 	if (retval == ERROR_OK) {
-		int after = timeval_ms();
+		int64_t after = timeval_ms();
 		command_print(CMD_CTX, "Loaded image %f kBytes/s", (float)(size/1024.0)/((float)(after-ms)/1000.0));
 	}
 	return retval;
