@@ -340,6 +340,50 @@ static const struct {
 
 };
 
+static const struct {
+	unsigned int id;
+	const char *name;
+	uint32_t bits;
+	enum arm_mode mode;
+	enum reg_type type;
+	const char *group;
+	const char *feature;
+} arm_vfp_v3_regs[] = {
+	{ ARM_VFP_V3_D0,  "d0",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D1,  "d1",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D2,  "d2",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D3,  "d3",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D4,  "d4",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D5,  "d5",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D6,  "d6",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D7,  "d7",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D8,  "d8",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D9,  "d9",  64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D10, "d10", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D11, "d11", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D12, "d12", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D13, "d13", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D14, "d14", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D15, "d15", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D16, "d16", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D17, "d17", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D18, "d18", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D19, "d19", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D20, "d20", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D21, "d21", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D22, "d22", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D23, "d23", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D24, "d24", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D25, "d25", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D26, "d26", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D27, "d27", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D28, "d28", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D29, "d29", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D30, "d30", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_D31, "d31", 64, ARM_MODE_ANY, REG_TYPE_IEEE_DOUBLE, NULL, "org.gnu.gdb.arm.vfp"},
+	{ ARM_VFP_V3_FPSCR, "fpscr", 32, ARM_MODE_ANY, REG_TYPE_INT, "float", "org.gnu.gdb.arm.vfp"},
+};
+
 /* map core mode (USR, FIQ, ...) and register number to
  * indices into the register cache
  */
@@ -567,6 +611,10 @@ static int armv4_5_set_core_reg(struct reg *reg, uint8_t *buf)
 		}
 	} else {
 		buf_set_u32(reg->value, 0, 32, value);
+		if (reg->size == 64) {
+			value = buf_get_u32(buf + 4, 0, 32);
+			buf_set_u32(reg->value + 4, 0, 32, value);
+		}
 		reg->valid = 1;
 	}
 	reg->dirty = 1;
@@ -582,6 +630,10 @@ static const struct reg_arch_type arm_reg_type = {
 struct reg_cache *arm_build_reg_cache(struct target *target, struct arm *arm)
 {
 	int num_regs = ARRAY_SIZE(arm_core_regs);
+	int num_core_regs = num_regs;
+	if (arm->arm_vfp_version == ARM_VFP_V3)
+		num_regs += ARRAY_SIZE(arm_vfp_v3_regs);
+
 	struct reg_cache *cache = malloc(sizeof(struct reg_cache));
 	struct reg *reg_list = calloc(num_regs, sizeof(struct reg));
 	struct arm_reg *reg_arch_info = calloc(num_regs, sizeof(struct arm_reg));
@@ -599,7 +651,7 @@ struct reg_cache *arm_build_reg_cache(struct target *target, struct arm *arm)
 	cache->reg_list = reg_list;
 	cache->num_regs = 0;
 
-	for (i = 0; i < num_regs; i++) {
+	for (i = 0; i < num_core_regs; i++) {
 		/* Skip registers this core doesn't expose */
 		if (arm_core_regs[i].mode == ARM_MODE_MON
 			&& arm->core_type != ARM_MODE_MON)
@@ -651,9 +703,38 @@ struct reg_cache *arm_build_reg_cache(struct target *target, struct arm *arm)
 		cache->num_regs++;
 	}
 
+	int j;
+	for (i = num_core_regs, j = 0; i < num_regs; i++, j++) {
+		reg_arch_info[i].num = arm_vfp_v3_regs[j].id;
+		reg_arch_info[i].mode = arm_vfp_v3_regs[j].mode;
+		reg_arch_info[i].target = target;
+		reg_arch_info[i].arm = arm;
+
+		reg_list[i].name = arm_vfp_v3_regs[j].name;
+		reg_list[i].number = arm_vfp_v3_regs[j].id;
+		reg_list[i].size = arm_vfp_v3_regs[j].bits;
+		reg_list[i].value = reg_arch_info[i].value;
+		reg_list[i].type = &arm_reg_type;
+		reg_list[i].arch_info = &reg_arch_info[i];
+		reg_list[i].exist = true;
+
+		reg_list[i].caller_save = false;
+
+		reg_list[i].reg_data_type = malloc(sizeof(struct reg_data_type));
+		reg_list[i].reg_data_type->type = arm_vfp_v3_regs[j].type;
+
+		reg_list[i].feature = malloc(sizeof(struct reg_feature));
+		reg_list[i].feature->name = arm_vfp_v3_regs[j].feature;
+
+		reg_list[i].group = arm_vfp_v3_regs[j].group;
+
+		cache->num_regs++;
+	}
+
 	arm->pc = reg_list + 15;
 	arm->cpsr = reg_list + ARMV4_5_CPSR;
 	arm->core_cache = cache;
+
 	return cache;
 }
 
@@ -666,14 +747,19 @@ int arm_arch_state(struct target *target)
 		return ERROR_FAIL;
 	}
 
+	/* avoid filling log waiting for fileio reply */
+	if (arm->semihosting_hit_fileio)
+		return ERROR_OK;
+
 	LOG_USER("target halted in %s state due to %s, current mode: %s\n"
-		"cpsr: 0x%8.8" PRIx32 " pc: 0x%8.8" PRIx32 "%s",
+		"cpsr: 0x%8.8" PRIx32 " pc: 0x%8.8" PRIx32 "%s%s",
 		arm_state_strings[arm->core_state],
 		debug_reason_name(target),
 		arm_mode_name(arm->core_mode),
 		buf_get_u32(arm->cpsr->value, 0, 32),
 		buf_get_u32(arm->pc->value, 0, 32),
-		arm->is_semihosting ? ", semihosting" : "");
+		arm->is_semihosting ? ", semihosting" : "",
+		arm->is_semihosting_fileio ? " fileio" : "");
 
 	return ERROR_OK;
 }
@@ -811,7 +897,7 @@ COMMAND_HANDLER(handle_arm_disassemble_command)
 	}
 
 	struct arm *arm = target_to_arm(target);
-	uint32_t address;
+	target_addr_t address;
 	int count = 1;
 	int thumb = 0;
 
@@ -835,7 +921,7 @@ COMMAND_HANDLER(handle_arm_disassemble_command)
 			COMMAND_PARSE_NUMBER(int, CMD_ARGV[1], count);
 		/* FALL THROUGH */
 		case 1:
-			COMMAND_PARSE_NUMBER(u32, CMD_ARGV[0], address);
+			COMMAND_PARSE_ADDRESS(CMD_ARGV[0], address);
 			if (address & 0x01) {
 				if (!thumb) {
 					command_print(CMD_CTX, "Disassemble as Thumb");
@@ -1055,6 +1141,73 @@ COMMAND_HANDLER(handle_arm_semihosting_command)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(handle_arm_semihosting_fileio_command)
+{
+	struct target *target = get_current_target(CMD_CTX);
+
+	if (target == NULL) {
+		LOG_ERROR("No target selected");
+		return ERROR_FAIL;
+	}
+
+	struct arm *arm = target_to_arm(target);
+
+	if (!is_arm(arm)) {
+		command_print(CMD_CTX, "current target isn't an ARM");
+		return ERROR_FAIL;
+	}
+
+	if (!arm->is_semihosting) {
+		command_print(CMD_CTX, "semihosting is not enabled");
+		return ERROR_FAIL;
+	}
+
+	if (CMD_ARGC > 0)
+		COMMAND_PARSE_ENABLE(CMD_ARGV[0], arm->is_semihosting_fileio);
+
+	command_print(CMD_CTX, "semihosting fileio is %s",
+		arm->is_semihosting_fileio
+		? "enabled" : "disabled");
+
+	return ERROR_OK;
+}
+
+COMMAND_HANDLER(handle_arm_semihosting_cmdline)
+{
+	struct target *target = get_current_target(CMD_CTX);
+	unsigned int i;
+
+	if (target == NULL) {
+		LOG_ERROR("No target selected");
+		return ERROR_FAIL;
+	}
+
+	struct arm *arm = target_to_arm(target);
+
+	if (!is_arm(arm)) {
+		command_print(CMD_CTX, "current target isn't an ARM");
+		return ERROR_FAIL;
+	}
+
+	if (!arm->setup_semihosting) {
+		command_print(CMD_CTX, "semihosting not supported for current target");
+		return ERROR_FAIL;
+	}
+
+	free(arm->semihosting_cmdline);
+	arm->semihosting_cmdline = CMD_ARGC > 0 ? strdup(CMD_ARGV[0]) : NULL;
+
+	for (i = 1; i < CMD_ARGC; i++) {
+		char *cmdline = alloc_printf("%s %s", arm->semihosting_cmdline, CMD_ARGV[i]);
+		if (cmdline == NULL)
+			break;
+		free(arm->semihosting_cmdline);
+		arm->semihosting_cmdline = cmdline;
+	}
+
+	return ERROR_OK;
+}
+
 static const struct command_registration arm_exec_command_handlers[] = {
 	{
 		.name = "reg",
@@ -1096,6 +1249,20 @@ static const struct command_registration arm_exec_command_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.usage = "['enable'|'disable']",
 		.help = "activate support for semihosting operations",
+	},
+	{
+		"semihosting_cmdline",
+		.handler = handle_arm_semihosting_cmdline,
+		.mode = COMMAND_EXEC,
+		.usage = "arguments",
+		.help = "command line arguments to be passed to program",
+	},
+	{
+		"semihosting_fileio",
+		.handler = handle_arm_semihosting_fileio_command,
+		.mode = COMMAND_EXEC,
+		.usage = "['enable'|'disable']",
+		.help = "activate support for semihosting fileio operations",
 	},
 
 	COMMAND_REGISTRATION_DONE
@@ -1143,6 +1310,10 @@ int arm_get_gdb_reg_list(struct target *target,
 
 	case REG_CLASS_ALL:
 		*reg_list_size = (arm->core_type != ARM_MODE_MON ? 48 : 51);
+		unsigned int list_size_core = *reg_list_size;
+		if (arm->arm_vfp_version == ARM_VFP_V3)
+			*reg_list_size += 33;
+
 		*reg_list = malloc(sizeof(struct reg *) * (*reg_list_size));
 
 		for (i = 0; i < 16; i++)
@@ -1162,6 +1333,12 @@ int arm_get_gdb_reg_list(struct target *target,
 		}
 		(*reg_list)[24] = &arm_gdb_dummy_fps_reg;
 		(*reg_list)[24]->size = 0;
+
+		if (arm->arm_vfp_version == ARM_VFP_V3) {
+			unsigned int num_core_regs = ARRAY_SIZE(arm_core_regs);
+			for (i = 0; i < 33; i++)
+				(*reg_list)[list_size_core + i] = &(arm->core_cache->reg_list[num_core_regs + i]);
+		}
 
 		return ERROR_OK;
 		break;
@@ -1391,8 +1568,8 @@ int armv4_5_run_algorithm(struct target *target,
 	struct mem_param *mem_params,
 	int num_reg_params,
 	struct reg_param *reg_params,
-	uint32_t entry_point,
-	uint32_t exit_point,
+	target_addr_t entry_point,
+	target_addr_t exit_point,
 	int timeout_ms,
 	void *arch_info)
 {
@@ -1401,8 +1578,8 @@ int armv4_5_run_algorithm(struct target *target,
 			mem_params,
 			num_reg_params,
 			reg_params,
-			entry_point,
-			exit_point,
+			(uint32_t)entry_point,
+			(uint32_t)exit_point,
 			timeout_ms,
 			arch_info,
 			armv4_5_run_algorithm_completion);
@@ -1413,7 +1590,7 @@ int armv4_5_run_algorithm(struct target *target,
  *
  */
 int arm_checksum_memory(struct target *target,
-	uint32_t address, uint32_t count, uint32_t *checksum)
+	target_addr_t address, uint32_t count, uint32_t *checksum)
 {
 	struct working_area *crc_algorithm;
 	struct arm_algorithm arm_algo;
@@ -1486,7 +1663,7 @@ cleanup:
  *
  */
 int arm_blank_check_memory(struct target *target,
-	uint32_t address, uint32_t count, uint32_t *blank)
+	target_addr_t address, uint32_t count, uint32_t *blank, uint8_t erased_value)
 {
 	struct working_area *check_algorithm;
 	struct reg_param reg_params[3];
@@ -1501,6 +1678,12 @@ int arm_blank_check_memory(struct target *target,
 	};
 
 	assert(sizeof(check_code_le) % 4 == 0);
+
+	if (erased_value != 0xff) {
+		LOG_ERROR("Erase value 0x%02" PRIx8 " not yet supported for ARMv4/v5 targets",
+			erased_value);
+		return ERROR_FAIL;
+	}
 
 	/* make sure we have a working area */
 	retval = target_alloc_working_area(target,
@@ -1529,7 +1712,7 @@ int arm_blank_check_memory(struct target *target,
 	buf_set_u32(reg_params[1].value, 0, 32, count);
 
 	init_reg_param(&reg_params[2], "r2", 32, PARAM_IN_OUT);
-	buf_set_u32(reg_params[2].value, 0, 32, 0xff);
+	buf_set_u32(reg_params[2].value, 0, 32, erased_value);
 
 	/* armv4 must exit using a hardware breakpoint */
 	if (arm->is_armv4)

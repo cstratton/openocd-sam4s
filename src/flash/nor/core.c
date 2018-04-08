@@ -50,10 +50,17 @@ int flash_driver_erase(struct flash_bank *bank, int first, int last)
 int flash_driver_protect(struct flash_bank *bank, int set, int first, int last)
 {
 	int retval;
+	int num_blocks;
+
+	if (bank->num_prot_blocks)
+		num_blocks = bank->num_prot_blocks;
+	else
+		num_blocks = bank->num_sectors;
+
 
 	/* callers may not supply illegal parameters ... */
-	if (first < 0 || first > last || last >= bank->num_sectors) {
-		LOG_ERROR("illegal sector range");
+	if (first < 0 || first > last || last >= num_blocks) {
+		LOG_ERROR("illegal protection block range");
 		return ERROR_FAIL;
 	}
 
@@ -69,11 +76,11 @@ int flash_driver_protect(struct flash_bank *bank, int set, int first, int last)
 	 * the target could have reset, power cycled, been hot plugged,
 	 * the application could have run, etc.
 	 *
-	 * Drivers only receive valid sector range.
+	 * Drivers only receive valid protection block range.
 	 */
 	retval = bank->driver->protect(bank, set, first, last);
 	if (retval != ERROR_OK)
-		LOG_ERROR("failed setting protection for areas %d to %d", first, last);
+		LOG_ERROR("failed setting protection for blocks %d to %d", first, last);
 
 	return retval;
 }
@@ -162,6 +169,31 @@ int flash_get_bank_count(void)
 	for (p = flash_banks; p; p = p->next)
 		i++;
 	return i;
+}
+
+void default_flash_free_driver_priv(struct flash_bank *bank)
+{
+	free(bank->driver_priv);
+	bank->driver_priv = NULL;
+}
+
+void flash_free_all_banks(void)
+{
+	struct flash_bank *bank = flash_banks;
+	while (bank) {
+		struct flash_bank *next = bank->next;
+		if (bank->driver->free_driver_priv)
+			bank->driver->free_driver_priv(bank);
+		else
+			LOG_WARNING("Flash driver of %s does not support free_driver_priv()", bank->name);
+
+		free(bank->name);
+		free(bank->sectors);
+		free(bank->prot_blocks);
+		free(bank);
+		bank = next;
+	}
+	flash_banks = NULL;
 }
 
 struct flash_bank *get_flash_bank_by_name_noprobe(const char *name)
@@ -288,7 +320,7 @@ static int default_flash_mem_blank_check(struct flash_bank *bank)
 				goto done;
 
 			for (nBytes = 0; nBytes < chunk; nBytes++) {
-				if (buffer[nBytes] != 0xFF) {
+				if (buffer[nBytes] != bank->erased_value) {
 					bank->sectors[i].is_erased = 0;
 					break;
 				}
@@ -319,12 +351,12 @@ int default_flash_blank_check(struct flash_bank *bank)
 		uint32_t address = bank->base + bank->sectors[i].offset;
 		uint32_t size = bank->sectors[i].size;
 
-		retval = target_blank_check_memory(target, address, size, &blank);
+		retval = target_blank_check_memory(target, address, size, &blank, bank->erased_value);
 		if (retval != ERROR_OK) {
 			fast_check = 0;
 			break;
 		}
-		if (blank == 0xFF)
+		if (blank == bank->erased_value)
 			bank->sectors[i].is_erased = 1;
 		else
 			bank->sectors[i].is_erased = 0;
@@ -392,18 +424,21 @@ static int flash_iterate_address_range_inner(struct target *target,
 		return ERROR_FLASH_DST_BREAKS_ALIGNMENT;
 	}
 
-	addr -= c->base;
-	last_addr -= c->base;
+	if (c->prot_blocks == NULL || c->num_prot_blocks == 0) {
+		/* flash driver does not define protect blocks, use sectors instead */
+		iterate_protect_blocks = false;
+	}
 
-	if (iterate_protect_blocks && c->prot_blocks && c->num_prot_blocks) {
+	if (iterate_protect_blocks) {
 		block_array = c->prot_blocks;
 		num_blocks = c->num_prot_blocks;
 	} else {
 		block_array = c->sectors;
 		num_blocks = c->num_sectors;
-		iterate_protect_blocks = false;
 	}
 
+	addr -= c->base;
+	last_addr -= c->base;
 
 	for (i = 0; i < num_blocks; i++) {
 		struct flash_sector *f = &block_array[i];
@@ -594,7 +629,7 @@ int flash_write_unlock(struct target *target, struct image *image,
 		uint32_t buffer_size;
 		uint8_t *buffer;
 		int section_last;
-		uint32_t run_address = sections[section]->base_address + section_offset;
+		target_addr_t run_address = sections[section]->base_address + section_offset;
 		uint32_t run_size = sections[section]->size - section_offset;
 		int pad_bytes = 0;
 
@@ -610,7 +645,7 @@ int flash_write_unlock(struct target *target, struct image *image,
 		if (retval != ERROR_OK)
 			goto done;
 		if (c == NULL) {
-			LOG_WARNING("no flash bank found for address %" PRIx32, run_address);
+			LOG_WARNING("no flash bank found for address " TARGET_ADDR_FMT, run_address);
 			section++;	/* and skip it */
 			section_offset = 0;
 			continue;
@@ -645,7 +680,18 @@ int flash_write_unlock(struct target *target, struct image *image,
 			/* if we have multiple sections within our image,
 			 * flash programming could fail due to alignment issues
 			 * attempt to rebuild a consecutive buffer for the flash loader */
-			pad_bytes = (sections[section_last + 1]->base_address) - (run_address + run_size);
+			target_addr_t run_next_addr = run_address + run_size;
+			if (sections[section_last + 1]->base_address < run_next_addr) {
+				LOG_ERROR("Section at " TARGET_ADDR_FMT
+					" overlaps section ending at " TARGET_ADDR_FMT,
+					sections[section_last + 1]->base_address,
+					run_next_addr);
+				LOG_ERROR("Flash write aborted.");
+				retval = ERROR_FAIL;
+				goto done;
+			}
+
+			pad_bytes = sections[section_last + 1]->base_address - run_next_addr;
 			padding[section_last] = pad_bytes;
 			run_size += sections[++section_last]->size;
 			run_size += pad_bytes;

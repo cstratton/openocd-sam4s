@@ -171,7 +171,8 @@ static int mdr_erase(struct flash_bank *bank, int first, int last)
 	if (retval != ERROR_OK)
 		goto reset_pg_and_lock;
 
-	if ((first == 0) && (last == (bank->num_sectors - 1))) {
+	if ((first == 0) && (last == (bank->num_sectors - 1)) &&
+		!mdr_info->mem_type) {
 		retval = mdr_mass_erase(bank);
 		goto reset_pg_and_lock;
 	}
@@ -632,4 +633,5 @@ struct flash_driver mdr_flash = {
 	.erase_check = default_flash_blank_check,
 	.protect_check = mdr_protect_check,
 	.info = get_mdr_info,
+	.free_driver_priv = default_flash_free_driver_priv,
 };

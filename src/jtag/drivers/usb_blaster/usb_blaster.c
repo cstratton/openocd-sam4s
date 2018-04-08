@@ -147,11 +147,8 @@ struct drvs_map {
 };
 
 static struct drvs_map lowlevel_drivers_map[] = {
-#if BUILD_USB_BLASTER_LIBFTDI
+#if BUILD_USB_BLASTER
 	{ .name = "ftdi", .drv_register = ublast_register_ftdi },
-#endif
-#if BUILD_USB_BLASTER_FTD2XX
-	{ .name = "ftd2xx", .drv_register = ublast_register_ftd2xx },
 #endif
 #if BUILD_USB_BLASTER_2
 	{ .name = "ublast2", .drv_register = ublast2_register_libusb },
@@ -842,26 +839,30 @@ static int ublast_init(void)
 {
 	int ret, i;
 
-	if (info.lowlevel_name) {
-		for (i = 0; lowlevel_drivers_map[i].name; i++)
-			if (!strcmp(lowlevel_drivers_map[i].name, info.lowlevel_name))
+	for (i = 0; lowlevel_drivers_map[i].name; i++) {
+		if (info.lowlevel_name) {
+			if (!strcmp(lowlevel_drivers_map[i].name, info.lowlevel_name)) {
+				info.drv = lowlevel_drivers_map[i].drv_register();
+				if (!info.drv) {
+					LOG_ERROR("Error registering lowlevel driver \"%s\"",
+						  info.lowlevel_name);
+					return ERROR_JTAG_DEVICE_ERROR;
+				}
 				break;
-		if (lowlevel_drivers_map[i].name)
+			}
+		} else {
 			info.drv = lowlevel_drivers_map[i].drv_register();
-		if (!info.drv) {
-			LOG_ERROR("no lowlevel driver found for %s or lowlevel driver opening error",
-				  info.lowlevel_name);
-			return ERROR_JTAG_DEVICE_ERROR;
+			if (info.drv) {
+				info.lowlevel_name = strdup(lowlevel_drivers_map[i].name);
+				LOG_INFO("No lowlevel driver configured, using %s", info.lowlevel_name);
+				break;
+			}
 		}
-	} else {
-		LOG_INFO("No lowlevel driver configured, will try them all");
-		for (i = 0; !info.drv && lowlevel_drivers_map[i].name; i++)
-			info.drv = lowlevel_drivers_map[i].drv_register();
-		if (!info.drv) {
-			LOG_ERROR("no lowlevel driver found");
-			return ERROR_JTAG_DEVICE_ERROR;
-		}
-		info.lowlevel_name = strdup(lowlevel_drivers_map[i-1].name);
+	}
+
+	if (!info.drv) {
+		LOG_ERROR("No lowlevel driver available");
+		return ERROR_JTAG_DEVICE_ERROR;
 	}
 
 	/*
@@ -1048,8 +1049,8 @@ static const struct command_registration ublast_command_handlers[] = {
 		.name = "usb_blaster_lowlevel_driver",
 		.handler = ublast_handle_lowlevel_drv_command,
 		.mode = COMMAND_CONFIG,
-		.help = "set the lowlevel access for the USB Blaster (ftdi, ftd2xx, ublast2)",
-		.usage = "(ftdi|ftd2xx|ublast2)",
+		.help = "set the lowlevel access for the USB Blaster (ftdi, ublast2)",
+		.usage = "(ftdi|ublast2)",
 	},
 	{
 		.name = "usb_blaster_pin",
